@@ -196,19 +196,25 @@ void menuSidebandToggle(int btn){
       printLine2("LSB \x7E USB");
   }
   else {
-      if (isUSB == true){
-        isUSB = false;
-        printLine2("LSB Selected");
-        active_delay(500);
-        printLine2("");
-      }
-      else {
-        isUSB = true;
-        printLine2("USB Selected");
-        active_delay(500);
-        printLine2("");
-      }
-    
+    if (isUSB == true){
+      isUSB = false;
+      printLine2("LSB Selected");
+      active_delay(500);
+      printLine2("");
+    }
+    else {
+      isUSB = true;
+      printLine2("USB Selected");
+      active_delay(500);
+      printLine2("");
+    }
+    //Added by KD8CEC
+    if (vfoActive == VFO_B){
+      isUsbVfoB = isUSB;
+    }
+    else {
+      isUsbVfoB = isUSB;
+    }
     updateDisplay();
     menuOn = 0;
   }
@@ -224,17 +230,18 @@ void menuSplitToggle(int btn){
       printLine2("Split On \x7E Off");
   }
   else {
-      if (splitOn == 1){
-        splitOn = 0;
-        printLine2("Split ON");
-      }
-      else {
-        splitOn = 1;
-        if (ritOn == 1)
-          ritOn = 0;
-        printLine2("Split Off");
-      }
+    if (splitOn == 1){
+      splitOn = 0;
+      printLine2("Split ON");
+    }
+    else {
+      splitOn = 1;
+      if (ritOn == 1)
+        ritOn = 0;
+      printLine2("Split Off");
+    }
     active_delay(500);
+    printLine2("");
     updateDisplay();
     menuOn = 0;
   }
@@ -506,7 +513,7 @@ void menuSetupCwTone(int btn){
   tone(CW_TONE, sideTone);
 
   //disable all clock 1 and clock 2 
-  while (digitalRead(PTT) == HIGH || !btnDown())
+  while (digitalRead(PTT) == HIGH && !btnDown())
   {
     knob = enc_read();
 
@@ -616,6 +623,11 @@ void menuSetupKeyer(int btn){
   printLine1("Keyer Set!");
   active_delay(600);
   printLine1("");
+
+  //Added KD8CEC
+  printLine2("");
+  updateDisplay(); 
+  menuOn = 0;  
 }
 
 void menuReadADC(int btn){

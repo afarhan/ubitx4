@@ -1,4 +1,4 @@
- /**
+  /**
  * This source file is under General Public License version 3.
  * 
  * This verision uses a built-in Si5351 library
@@ -337,7 +337,7 @@ void startTx(byte txMode){
       else if (vfoActive == VFO_A){
         vfoActive = VFO_B;
         frequency = vfoB;
-        isUSB = isUsbVfoA;        
+        isUSB = isUsbVfoB;        
       }
     }
     setFrequency(frequency);
