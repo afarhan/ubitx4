@@ -557,11 +557,12 @@ void menuSetupCwDelay(int btn){
 
   active_delay(500);
   prev_cw_delay = cwDelayTime;
-  cwDelayTime = getValueByKnob(10, 1000, 50,  cwDelayTime, "6:Setup>CW Delay>", " msec");
+  cwDelayTime = getValueByKnob(10, 1000, 50,  cwDelayTime, "CW Delay>", " msec");
 
   printLine1("CW Delay Set!");  
   printLine2("");
   active_delay(500);
+  updateDisplay();
   menuOn = 0;
 }
 

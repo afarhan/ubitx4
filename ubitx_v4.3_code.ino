@@ -108,7 +108,7 @@ LiquidCrystal lcd(8,9,10,11,12,13);
  * the serial port as we can easily run out of buffer space. This is done in the serial_in_count variable.
  */
 char c[30], b[30];      
-char printBuff[2][17];  //mirrors what is showing on the two lines of the display
+char printBuff[2][31];  //mirrors what is showing on the two lines of the display
 int count = 0;          //to generally count ticks, loops, etc
 
 /** 
