@@ -260,126 +260,6 @@ void catReadEEPRom(void)
   Serial.write(cat, 2);
 }
 
-/**
- * Responds to all the cat commands, emulates FT-817
- */
-/*
-static boolean insideCat = false;
-void processCATCommand(byte* cmd) {
-  byte response[5];
-  
-  if (cmd[4] == 0x00){
-    response[0]=0;
-    Serial.write(response, 1);
-  }
-  else if (cmd[4] == 0x01) {
-    unsigned long f = readFreq(cmd);
-    setFrequency(f);   
-    updateDisplay();
-    //sprintf(b, "set:%ld", f); 
-    //printLine2(b);
-
-  }
-  // Get frequency
-  else if (cmd[4] == 0x03){
-    writeFreq(frequency,response); // Put the frequency into the buffer
-    if (isUSB)
-      response[4] = 0x01; //USB
-    else
-      response[4] = 0x00; //LSB
-    Serial.write(response,5);
-    printLine2("cat:getfreq");
-  }
-  else if (cmd[4] == 0x07){ // set mode
-    if (cmd[0] == 0x00 || cmd[0] == 0x03)
-      isUSB = 0;
-    else
-      isUSB = 1;
-    response[0] = 0x00;
-    Serial.write(response, 1);
-    setFrequency(frequency);
-    //printLine2("cat: mode changed");
-    //updateDisplay();
-  }
-  else if (cmd[4] == 0x88){
-    if (inTx){
-      stopTx();
-      txCAT = false;
-    }
-    else
-      response[0] = 0xf0;
-    printLine2("tx > rx");
-    Serial.write(response,1);
-  }
-  else if (cmd[4] == 0x08) { // PTT On
-    if (!inTx) {
-      response[0] = 0;
-      txCAT = true;
-      startTx(TX_SSB);
-      updateDisplay();
-    } else {
-      response[0] = 0xf0;
-    } 
-    Serial.write(response,1);
-    printLine2("rx > tx");
-  }
-  // Read TX keyed state
-  else if (cmd[4] == 0x10) {
-    if (!inTx) {
-      response[0] = 0;
-    } else {
-      response[0] = 0xf0;
-    } 
-    Serial.write(response,1);
-    printLine2("cat;0x10");
-  }
-  // PTT Off
-  else if (cmd[4] == 0x88) {
-    byte resBuf[0];
-    if (inTx) {
-      response[0] = 0;
-      //BUG, it should stop the tx here
-    } else {
-      response[0] = 0xf0;
-    }
-    Serial.write(response,1);
-    printLine2("cat;0x88");
-    //keyed = false;
-    //digitalWrite(13,LOW);
-  }
-  // Read receiver status
-  else if (cmd[4] == 0xe7) {
-    response[0] = 0x09;
-    Serial.write(response,1);
-    printLine2("cat;0xe7");
-  }
-  else if (cmd[4] == 0xf5){
-    
-  }
-  // Read receiver status
-  else if (cmd[4] == 0xf7) {
-    response[0] = 0x00;
-    if (inTx) {
-      response[0] = response[0] | 0xf0;
-    }
-    Serial.write(response,1);
-    printLine2("cat;0xf7");
-  }
-  else {
-    //somehow, get this to print the four bytes
-    ultoa(*((unsigned long *)cmd), c, 16);
-    itoa(cmd[4], b, 16);
-    strcat(b, ":");
-    strcat(b, c);
-    printLine2(b);
-    response[0] = 0x00;
-    Serial.write(response[0]);
-  }
-
-  insideCat = false;
-}
-*/
-
 void processCATCommand2(byte* cmd) {
   byte response[5];
   unsigned long f;
@@ -475,12 +355,21 @@ void processCATCommand2(byte* cmd) {
     break;
        
   case 0xf7:
-    // Read TX status
-    response[0] = 0x00;
-    if (inTx) {
-      response[0] = response[0] | 0x80;
+    {
+      boolean isHighSWR = false;
+      boolean isSplitOn = false;
+  
+      /*
+        Inverted -> *ptt = ((p->tx_status & 0x80) == 0); <-- souce code in ft817.c (hamlib)
+      */
+      response[0] = ((inTx ? 0 : 1) << 7) +
+        ((isHighSWR ? 1 : 0) << 6) +  //hi swr off / on
+        ((isSplitOn ? 1 : 0) << 5) + //Split on / off
+        (0 << 4) +  //dummy data
+        0x08;  //P0 meter data
+
+      Serial.write(response, 1);
     }
-    Serial.write(response,1);
     break;
     
   default:
@@ -528,19 +417,21 @@ void checkCAT(){
   for (i = 0; i < 5; i++)
     cat[i] = Serial.read();
 
-  catCount++;
 
   //this code is not re-entrant.
   if (insideCat == 1)
     return;
   insideCat = 1;
-/*
-  ultoa(*((unsigned long *)cat), c, 16);
-  itoa(cat[4], b, 16);
-  strcat(b, ":");
-  strcat(b, c);
-  printLine2(b);  
-*/  
+
+/**
+ *  This routine is enabled to debug the cat protocol
+  catCount++;
+
+  if (cat[4] != 0xf7 && cat[4] != 0xbb && cat[4] != 0x03){
+    sprintf(b, "%d %02x %02x%02x%02x%02x", catCount, cat[4],cat[0], cat[1], cat[2], cat[3]);  
+    printLine2(b);  
+  }
+  */
   processCATCommand2(cat);
   insideCat = 0;
 }
