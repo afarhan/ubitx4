@@ -186,6 +186,7 @@ int count = 0;          //to generally count ticks, loops, etc
 //these are the parameter passed to startTx
 #define TX_SSB 0
 #define TX_CW 1
+#define LEARN_CW 2
 
 char ritOn = 0;
 char vfoActive = VFO_A;
@@ -194,6 +195,7 @@ unsigned long vfoA=7150000L, vfoB=14200000L, sideTone=800, usbCarrier;
 char isUsbVfoA=0, isUsbVfoB=1;
 unsigned long frequency, ritRxFrequency, ritTxFrequency;  //frequency is the current frequency on the dial
 unsigned long firstIF =   45000000L;
+bool learn_cw_mode = false;
 
 //these are variables that control the keyer behaviour
 int cwSpeed = 100; //this is actuall the dot period in milliseconds
@@ -317,8 +319,10 @@ void setFrequency(unsigned long f){
  
 void startTx(byte txMode){
   unsigned long tx_freq = 0;  
-    
-  digitalWrite(TX_RX, 1);
+
+  if (txMode != LEARN_CW) {
+      digitalWrite(TX_RX, 1);
+  }
   inTx = 1;
   
   if (ritOn){
@@ -343,7 +347,7 @@ void startTx(byte txMode){
     setFrequency(frequency);
   }
 
-  if (txMode == TX_CW){
+  if (txMode == TX_CW) {
     //turn off the second local oscillator and the bfo
     si5351bx_setfreq(0, 0);
     si5351bx_setfreq(1, 0);
@@ -634,7 +638,7 @@ void setup()
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
-  printLine2("uBITX v4.3"); 
+  printLine2("uBITX v4.3a");
   //active_delay(500);
 
 //  initMeter(); //not used in this build

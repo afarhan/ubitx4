@@ -148,7 +148,9 @@ void cwKeyer(void){
   lastPaddle = 0;
   bool continue_loop = true;
   unsigned tmpKeyControl = 0;
-  
+
+  int txMode = learn_cw_mode?LEARN_CW:TX_CW;
+
   if( Iambic_Key ) {
     while(continue_loop) {
       switch (keyerState) {
@@ -194,7 +196,7 @@ void cwKeyer(void){
             
             keyDown = 0;
             cwTimeout = millis() + cwDelayTime * 10;  //+ CW_TIMEOUT;
-            startTx(TX_CW);
+            startTx(txMode);
           }
           ktimer += millis(); // set ktimer to interval end time
           keyerControl &= ~(DIT_L + DAH_L); // clear both paddle latch bits
@@ -240,8 +242,8 @@ void cwKeyer(void){
           active_delay(delayBeforeCWStartTime * 2);
           
           keyDown = 0;
-          cwTimeout = millis() + cwDelayTime * 10;  //+ CW_TIMEOUT; 
-          startTx(TX_CW);
+          cwTimeout = millis() + cwDelayTime * 10;  //+ CW_TIMEOUT;
+          startTx(txMode);
         }
         cwKeydown();
         
@@ -270,5 +272,3 @@ void cwKeyer(void){
     } //end of while
   }   //end of elese
 }
-
-
