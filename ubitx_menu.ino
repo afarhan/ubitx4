@@ -247,6 +247,29 @@ void menuSplitToggle(int btn){
   }
 }
 
+void menuSetupCWLearning(int btn) {
+  if (!btn) {
+    if (learn_cw_mode == true)
+      printLine2("Learn CW \x7E ON");
+    else
+      printLine2("Learn CW \x7E OFF");
+  }
+  else {
+    if (learn_cw_mode == false) {
+      learn_cw_mode = true;
+      printLine2("LearnCW: true");
+    } else {
+      learn_cw_mode = false;
+      printLine2("LearnCW: false");
+    }
+
+    active_delay(500);
+    printLine2("");
+    updateDisplay();
+    menuOn = 0;
+  }
+}
+
 int menuCWSpeed(int btn){
     int knob = 0;
     int wpm;
@@ -686,21 +709,23 @@ void doMenu(){
     else if (select < 60)
       menuCWSpeed(btnState);
     else if (select < 70)
+      menuSetupCWLearning(btnState);
+    else if (select < 80)
       select += menuSetup(btnState);
-    else if (select < 80 && !modeCalibrate)
+    else if (select < 90 && !modeCalibrate)
       menuExit(btnState);
-    else if (select < 90 && modeCalibrate)
-      menuSetupCalibration(btnState);   //crystal
     else if (select < 100 && modeCalibrate)
-      menuSetupCarrier(btnState);       //lsb
+      menuSetupCalibration(btnState);   //crystal
     else if (select < 110 && modeCalibrate)
-      menuSetupCwTone(btnState);
+      menuSetupCarrier(btnState);       //lsb
     else if (select < 120 && modeCalibrate)
-      menuSetupCwDelay(btnState);
+      menuSetupCwTone(btnState);
     else if (select < 130 && modeCalibrate)
-      menuReadADC(btnState);
+      menuSetupCwDelay(btnState);
     else if (select < 140 && modeCalibrate)
-        menuSetupKeyer(btnState);
+      menuReadADC(btnState);
+    else if (select < 150 && modeCalibrate)
+      menuSetupKeyer(btnState);
     else
       menuExit(btnState);  
   }
@@ -712,4 +737,3 @@ void doMenu(){
 
   checkCAT();
 }
-
