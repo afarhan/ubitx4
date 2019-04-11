@@ -213,9 +213,13 @@ void menuSidebandToggle(int btn){
       isUsbVfoB = isUSB;
     }
     else {
-      isUsbVfoB = isUSB;
+      isUsbVfoA = isUSB;
     }
     updateDisplay();
+
+    // Update the programmed frequency immediately so the band flips.
+    setFrequency(frequency);
+
     menuOn = 0;
   }
 }
