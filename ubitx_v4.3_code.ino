@@ -153,6 +153,11 @@ int count = 0;          //to generally count ticks, loops, etc
 // handkey, iambic a, iambic b : 0,1,2f
 #define CW_KEY_TYPE 358
 
+// Delay when switching between TX and RX.
+// This prevents spurious bursts when switching RX->TX.
+#define TX_DELAY_OSC_OFF 15  // wait 15ms after turning off si5351 for it to be off off
+#define TX_DELAY_ENABLE 30 // wait 30ms after enabling PTT to let things settle.
+
 /**
  * The uBITX is an upconnversion transceiver. The first IF is at 45 MHz.
  * The first IF frequency is not exactly at 45 Mhz but about 5 khz lower,
@@ -317,8 +322,19 @@ void setFrequency(unsigned long f){
  
 void startTx(byte txMode){
   unsigned long tx_freq = 0;  
-    
+
+  // Turn off the main mixer oscillator and wait for RX->TX burst before
+  // TX is flipped on.  Then we will re-enable the clocks.
+  si5351bx_setfreq(2, 0);
+
+  // Wait so things settle.
+  delay(TX_DELAY_OSC_OFF);
+
+  // Flip to TX.
   digitalWrite(TX_RX, 1);
+
+  // Wait for relays, etc to settle.
+  delay(TX_DELAY_ENABLE);
   inTx = 1;
   
   if (ritOn){
@@ -362,7 +378,13 @@ void startTx(byte txMode){
 void stopTx(){
   inTx = 0;
 
+  // Turn off the main vfo before disabling TX. setFrequency() will fix
+  // it.
+  si5351bx_setfreq(2, 0);           // disable the VFO oscillator.
+  delay(TX_DELAY_OSC_OFF);
+
   digitalWrite(TX_RX, 0);           //turn off the tx
+  delay(TX_DELAY_ENABLE);           // wait for relays to settle
   si5351bx_setfreq(0, usbCarrier);  //set back the cardrier oscillator anyway, cw tx switches it off
 
   if (ritOn)
