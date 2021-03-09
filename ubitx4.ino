@@ -671,7 +671,7 @@ void setup()
   initPorts();     
   initOscillators();
 
-  si5351bx_set_drive(0, 1); // 8ma
+  si5351bx_set_drive(0, 1); // 4ma
   si5351bx_set_drive(1, 1); // 4ma
   si5351bx_set_drive(2, 1); // 4ma
 
