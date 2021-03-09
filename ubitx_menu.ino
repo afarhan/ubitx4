@@ -455,6 +455,15 @@ void printCarrierFreq(unsigned long freq){
   printLine2(c);    
 }
 
+void
+printFreq(unsigned long freq)
+{
+  memset(c, 0, sizeof(c));
+  memset(b, 0, sizeof(b));
+  ultoa(freq, b, DEC);
+  printLine2(b);
+}
+
 void menuSetupCarrier(int btn){
   int knob = 0;
   unsigned long prevCarrier;
@@ -495,6 +504,54 @@ void menuSetupCarrier(int btn){
   active_delay(1000);
   
   si5351bx_setfreq(0, usbCarrier);          
+  setFrequency(frequency);    
+  updateDisplay();
+  printLine2("");
+  menuOn = 0; 
+}
+
+// Calibrate the IF frequency
+void menuSetupFreqIF(int btn){
+  int knob = 0;
+  unsigned long prevIF;
+   
+  if (!btn){
+      printLine2("Setup:IF      \x7E");
+    return;
+  }
+
+  prevIF = firstIF;
+  printLine1("Tune to loudest signal");  
+  printLine2("Press to confirm. ");
+  active_delay(1000);
+
+  setFrequency(frequency);
+  printFreq(firstIF);
+
+  //disable all clock 1 and clock 2 
+  while (!btnDown()){
+    knob = enc_read();
+
+    if (knob > 0)
+      firstIF += 50;
+    else if (knob < 0)
+      firstIF -= 50;
+
+    checkPTT();
+
+    if (knob == 0)
+      continue; //don't update the frequency or the display
+      
+    setFrequency(frequency);
+    printFreq(firstIF);
+    
+    active_delay(100);
+  }
+
+  printLine2("IF set!    ");
+  
+  EEPROM.put(CAL_FIRST_IF_FREQ, firstIF);
+  active_delay(1000);
   setFrequency(frequency);    
   updateDisplay();
   printLine2("");
@@ -669,7 +726,7 @@ void doMenu(){
     btnState = btnDown();
 
     if (i > 0){
-      if (modeCalibrate && select + i < 150)
+      if (modeCalibrate && select + i < 160)
         select += i;
       if (!modeCalibrate && select + i < 80)
         select += i;
@@ -705,6 +762,8 @@ void doMenu(){
       menuReadADC(btnState);
     else if (select < 140 && modeCalibrate)
         menuSetupKeyer(btnState);
+    else if (select < 150 && modeCalibrate)
+        menuSetupFreqIF(btnState);
     else
       menuExit(btnState);  
   }
@@ -716,4 +775,3 @@ void doMenu(){
 
   checkCAT();
 }
-

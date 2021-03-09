@@ -141,12 +141,15 @@ int count = 0;          //to generally count ticks, loops, etc
 #define CW_SIDETONE 24
 #define CW_SPEED 28
 
+// Adrian's custom values
+#define CAL_FIRST_IF_FREQ 252 // 252-255 - first IF freq calibrated value
+
 //These are defines for the new features back-ported from KD8CEC's software
 //these start from beyond 256 as Ian, KD8CEC has kept the first 256 bytes free for the base version
 #define VFO_A_MODE  256 // 2: LSB, 3: USB
 #define VFO_B_MODE  257
 
-//values that are stroed for the VFO modes
+//values that are stored for the VFO modes
 #define VFO_MODE_LSB 2
 #define VFO_MODE_USB 3
 
@@ -192,13 +195,15 @@ int count = 0;          //to generally count ticks, loops, etc
 #define TX_SSB 0
 #define TX_CW 1
 
+#define DEFAULT_FIRSTIF 45000000L;
+
 char ritOn = 0;
 char vfoActive = VFO_A;
 int8_t meter_reading = 0; // a -1 on meter makes it invisible
 unsigned long vfoA=7150000L, vfoB=14200000L, sideTone=800, usbCarrier;
 char isUsbVfoA=0, isUsbVfoB=1;
 unsigned long frequency, ritRxFrequency, ritTxFrequency;  //frequency is the current frequency on the dial
-unsigned long firstIF =   45000000L;
+unsigned long firstIF = DEFAULT_FIRSTIF;
 
 //these are variables that control the keyer behaviour
 int cwSpeed = 100; //this is actuall the dot period in milliseconds
@@ -545,7 +550,7 @@ void initSettings(){
   EEPROM.get(VFO_B, vfoB);
   EEPROM.get(CW_SIDETONE, sideTone);
   EEPROM.get(CW_SPEED, cwSpeed);
-  
+  EEPROM.get(CAL_FIRST_IF_FREQ, firstIF);
   
   if (usbCarrier > 12000000l || usbCarrier < 11990000l)
     usbCarrier = 11997000l;
@@ -557,6 +562,8 @@ void initSettings(){
     sideTone = 800;
   if (cwSpeed < 10 || 1000 < cwSpeed) 
     cwSpeed = 100;
+  if (firstIF < 44500000 || firstIF > 45500000)
+    firstIF = DEFAULT_FIRSTIF;
 
   /*
    * The VFO modes are read in as either 2 (USB) or 3(LSB), 0, the default
@@ -656,13 +663,17 @@ void setup()
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
-  printLine2("uBITX v4.3a");
+  printLine2("uBITX v4.3b");
   //active_delay(500);
 
 //  initMeter(); //not used in this build
   initSettings();
   initPorts();     
   initOscillators();
+
+  si5351bx_set_drive(0, 1); // 8ma
+  si5351bx_set_drive(1, 1); // 4ma
+  si5351bx_set_drive(2, 1); // 4ma
 
   frequency = vfoA;
   setFrequency(vfoA);
