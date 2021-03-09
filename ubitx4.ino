@@ -656,7 +656,7 @@ void setup()
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
-  printLine2("uBITX v4.3"); 
+  printLine2("uBITX v4.3a");
   //active_delay(500);
 
 //  initMeter(); //not used in this build
