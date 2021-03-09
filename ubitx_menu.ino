@@ -14,7 +14,7 @@
 
 /** A generic control to read variable values
 */
-int getValueByKnob(int minimum, int maximum, int step_size,  int initial, char* prefix, char *postfix)
+int getValueByKnob(int minimum, int maximum, int step_size,  int initial, const char* prefix, const char *postfix)
 {
     int knob = 0;
     int knob_value;
@@ -55,7 +55,7 @@ int getValueByKnob(int minimum, int maximum, int step_size,  int initial, char* 
 
 //# Menu: 1
 
-int menuBand(int btn){
+void menuBand(int btn){
   int knob = 0;
   int band;
   unsigned long offset;
@@ -251,7 +251,7 @@ void menuSplitToggle(int btn){
   }
 }
 
-int menuCWSpeed(int btn){
+void menuCWSpeed(int btn){
     int knob = 0;
     int wpm;
 
