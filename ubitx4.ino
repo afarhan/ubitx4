@@ -105,7 +105,7 @@ int count = 0;          //to generally count ticks, loops, etc
 #define TX_SSB 0
 #define TX_CW 1
 
-#define DEFAULT_FIRSTIF 45000000L;
+#define DEFAULT_FIRSTIF 45000000L
 
 char ritOn = 0;
 char vfoActive = VFO_A;
