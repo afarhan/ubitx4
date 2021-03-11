@@ -694,7 +694,9 @@ void menuSetupKeyer(int btn){
 
 void menuReadADC(int btn){
   int adc;
-  
+  char a = 0, al; // Go from A0 -> A7
+  int knob;
+
   if (!btn){
     printLine2("6:Setup>Read ADC>");
     return;
@@ -702,9 +704,39 @@ void menuReadADC(int btn){
   delay(500);
 
   while (!btnDown()){
-    adc = analogRead(ANALOG_KEYER);
+    // Assemble the display string, showing the A line and value
+    c[0] = 0;
+    strcat(c, "A");
+    itoa(a, b, 10);
+    strcat(c, b);
+    strcat(c, " = ");
+
+    // Map A line to value, yeah, I wish it were easier?
+    switch (a) {
+      case 0: al = A0; break;
+      case 1: al = A1; break;
+      case 2: al = A2; break;
+      case 3: al = A3; break;
+      case 4: al = A4; break;
+      case 5: al = A5; break;
+      case 6: al = A6; break;
+      case 7: al = A7; break;
+    }
+    adc = analogRead(al);
     itoa(adc, b, 10);
-    printLine1(b);
+    strcat(c, b);
+    printLine1(c);
+
+    // Read the encoder, see if we need to change the ADC
+    knob = enc_read();
+    if ((knob > 4) && (a < 7)) {
+      a++;
+      delay(100);
+    }
+    if ((knob < -4) && (a > 0)) {
+      a--;
+      delay(100);
+    }
   }
 
   printLine1("");
