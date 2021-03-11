@@ -708,6 +708,9 @@ void menuReadADC(int btn){
   }
 
   printLine1("");
+
+  // Debounce the menu select
+  delay(500);
   updateDisplay();
 }
 
