@@ -13,7 +13,7 @@
  * ground and six pins. Each of these six pins can be individually programmed 
  * either as an analog input, a digital input or a digital output. 
  * The pins are assigned as follows (left to right, display facing you): 
- *      Pin 1 (Violet), A7, SPARE
+ *      Pin 1 (Violet), A7, S-METER / SPARE
  *      Pin 2 (Blue),   A6, KEYER (DATA)
  *      Pin 3 (Green), +5v 
  *      Pin 4 (Yellow), Gnd

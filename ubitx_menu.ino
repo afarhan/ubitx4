@@ -478,7 +478,7 @@ void menuSetupCarrier(int btn){
   printLine2("Press to confirm. ");
   active_delay(1000);
 
-  usbCarrier = 11995000l;
+  usbCarrier = INIT_USB_FREQ;
   si5351bx_setfreq(0, usbCarrier);
   printCarrierFreq(usbCarrier);
 

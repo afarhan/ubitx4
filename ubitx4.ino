@@ -248,6 +248,7 @@ void startTx(byte txMode){
       si5351bx_setfreq(2, frequency - sideTone); 
   }
   updateDisplay();
+  clearMeterDisplay();
 }
 
 void stopTx(){
@@ -423,7 +424,7 @@ void initSettings(){
   EEPROM.get(CAL_FIRST_IF_FREQ, firstIF);
   
   if (usbCarrier > 12000000l || usbCarrier < 11990000l)
-    usbCarrier = 11997000l;
+    usbCarrier = INIT_USB_FREQ;
   if (vfoA > 35000000l || 3500000l > vfoA)
      vfoA = 7150000l;
   if (vfoB > 35000000l || 3500000l > vfoB)
@@ -528,15 +529,16 @@ void initPorts(){
 void setup()
 {
   Serial.begin(38400);
-  Serial.flush();  
+  Serial.flush();
   lcd.begin(16, 2);
+  lcd.clear();
+  initMeter();
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
   printLine2("uBITX v4.3b");
   //active_delay(500);
 
-//  initMeter(); //not used in this build
   initSettings();
   initPorts();     
   initOscillators();
@@ -559,21 +561,23 @@ void setup()
  */
 
 byte flasher = 0;
-void loop(){ 
-  
-  cwKeyer(); 
+void loop(){
+
+  cwKeyer();
   if (!txCAT)
     checkPTT();
   checkButton();
 
-  //tune only when not tranmsitting 
+  //tune / display s-meter only when not tranmsitting
   if (!inTx){
     if (ritOn)
       doRIT();
     else 
       doTuning();
+    // TODO: only update this every few milliseconds? Not constantly?
+    updateMeterDisplay();
   }
-  
+
   //we check CAT after the encoder as it might put the radio into TX
   checkCAT();
 }
