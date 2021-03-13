@@ -22,14 +22,13 @@
  *      Pin 7 (Brown),  A1, ENC B
  *      Pin 8 (Black),  A0, ENC A
  *Note: A5, A4 are wired to the Si5351 as I2C interface 
- *       *     
- * Though, this can be assigned anyway, for this application of the Arduino, we will make the following
- * assignment
- * A2 will connect to the PTT line, which is the usually a part of the mic connector
- * A3 is connected to a push button that can momentarily ground this line. This will be used for RIT/Bandswitching, etc.
- * A6 is to implement a keyer, it is reserved and not yet implemented
- * A7 is connected to a center pin of good quality 100K or 10K linear potentiometer with the two other ends connected to
- * ground and +5v lines available on the connector. This implments the tuning mechanism
+ *       *
+ * - A0 and A1 are used for the rotary encoder
+ * - A2 is used for the menu push button
+ * - A3 is PTT to the microphone
+ * - A6 is hooked up to the CW key jack via resistors, to implement
+ *   either a straight key or paddle support
+ * - A7 is spare, but is currently used to drive an S-meter menu
  */
 
 #define ENC_A (A0)
