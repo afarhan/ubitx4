@@ -6,8 +6,14 @@
  * quickly cleared up.
  */
 
+#include "ubitx4_eeprom_defs.h"
+#include "ubitx4_pin_config.h"
+
+#include "ubitx_ui.h"
+
 //returns true if the button is pressed
-int btnDown(){
+int btnDown(void)
+{
   if (digitalRead(FBUTTON) == HIGH)
     return 0;
   else
@@ -38,7 +44,7 @@ const PROGMEM uint8_t s_meter_bitmap[64] = {
 };
 
 // Initialise the custom character out of program memory
-void
+static void
 initLcdChar(char lcd_char, char s_meter_bitmap_offset)
 {
   uint8_t tmp_bytes[8];
@@ -51,7 +57,7 @@ initLcdChar(char lcd_char, char s_meter_bitmap_offset)
 }
 
 // initializes the custom characters
-void initMeter()
+void initMeter(void)
 {
   lcd.setCursor(0, 0); // Ensure we've reset to display RAM
   initLcdChar(0, 0); // First call - points to chargen RAM
@@ -69,7 +75,8 @@ void initMeter()
 /**
  * The meter is drawn with special characters from 0..255
  */
-void drawMeter(uint8_t needle) {
+void drawMeter(uint8_t needle)
+{
   meter[0] = needle / 32;
   meter[1] = needle / 32;
 }
@@ -98,7 +105,8 @@ void printLine2(const char *c){
 }
 
 // this builds up the top line of the display with frequency and mode
-void updateDisplay() {
+void updateDisplay(void)
+{
   // tks Jack Purdum W8TEE
   // replaced fsprint commmands by str commands for code size reduction
 

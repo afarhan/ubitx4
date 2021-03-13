@@ -1,4 +1,4 @@
-  /**
+/**
  * This source file is under General Public License version 3.
  * 
  * This verision uses a built-in Si5351 library
@@ -36,6 +36,10 @@
 #include "ubitx4_eeprom_defs.h"
 #include "ubitx4_pin_config.h"
 #include "ubitx4_defaults.h"
+
+#include "ubitx4_txfilt.h"
+
+#include "ubitx_ui.h"
 
 /**
     The main chip which generates upto three oscillators of various frequencies in the
