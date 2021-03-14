@@ -94,14 +94,21 @@ void printLine(char linenmbr, const char *c) {
   }
 }
 
+void
+printLineF(char linenmbr, const __FlashStringHelper *c)
+{
+  int i;
+  char tmp[17]; // XXX TODO: figure out how to do this inline without the buffer
+  PGM_P p = reinterpret_cast<PGM_P>(c);
+  unsigned char ch;
 
-//  short cut to print to the first line
-void printLine1(const char *c){
-  printLine(1,c);
-}
-//  short cut to print to the first line
-void printLine2(const char *c){
-  printLine(0,c);
+  for (i = 0; i < 17; i++) {
+    ch = pgm_read_byte(p++);
+    tmp[i] = ch;
+    if (ch == 0)
+      break;
+  }
+  printLine(linenmbr, tmp);
 }
 
 // this builds up the top line of the display with frequency and mode
