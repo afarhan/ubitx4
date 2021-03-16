@@ -142,19 +142,25 @@ void updateDisplay(void)
     else
       strcat(c, "B:");
   }
-
-
-
-  //one mhz digit if less than 10 M, two digits if more
-  if (frequency < 10000000l){
+  
+  /*
+   * + zero mhz digit/one less dot if less than 1MHz
+   * + one mhz digit if less than 10MHz
+   * + two digits if more
+   */
+  if (frequency < 1000000L) {
+    c[6] = ' '; c[7] = ' '; c[8] = ' ';
+    strncat(c, &b[0], 3);    
+    strcat(c, ".");
+    strncat(c, &b[3], 3);
+  } else if (frequency < 10000000l){
     c[6] = ' ';
     c[7]  = b[0];
     strcat(c, ".");
     strncat(c, &b[1], 3);    
     strcat(c, ".");
     strncat(c, &b[4], 3);
-  }
-  else {
+  } else {
     strncat(c, b, 2);
     strcat(c, ".");
     strncat(c, &b[2], 3);
