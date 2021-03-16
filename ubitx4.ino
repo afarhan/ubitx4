@@ -326,23 +326,49 @@ void checkButton(){
 void doTuning(){
   int s;
   unsigned long prev_freq;
+  int freq_delta = 0;
 
   s = enc_read();
   if (s != 0){
     prev_freq = frequency;
 
+    /*
+     * Ensure that we don't tune below LOWEST_FREQ/HIGHEST_FREQ.
+     * We need to be sure that frequency doesn't underflow!
+     */
+
     if (s > 4)
-      frequency += 10000l;
+      freq_delta = 10000;
     else if (s > 2)
-      frequency += 500;
+      freq_delta = 500;
     else if (s > 0)
-      frequency +=  50l;
+      freq_delta = 50;
     else if (s > -2)
-      frequency -= 50l;
+      freq_delta = -50;
     else if (s > -4)
-      frequency -= 500l;
+      freq_delta = -500;
     else
-      frequency -= 10000l;
+      freq_delta = -10000;
+
+    /* Be super careful we don't underflow! */
+    if (freq_delta < 0) {
+      unsigned long offset;
+      offset = frequency - LOWEST_FREQ;
+      if (offset < (-freq_delta)) {
+        frequency = LOWEST_FREQ;
+        freq_delta = 0;
+      }
+    }
+    
+    /* Not so likely to overflow here; a straight comparison is fine */
+    if (freq_delta > 0) {
+      if (frequency + freq_delta > HIGHEST_FREQ) {
+        frequency = HIGHEST_FREQ;
+        freq_delta = 0;
+      }
+    }
+
+    frequency += freq_delta;
 
     if (prev_freq < 10000000l && frequency > 10000000l)
       isUSB = true;
@@ -350,8 +376,14 @@ void doTuning(){
     if (prev_freq > 10000000l && frequency < 10000000l)
       isUSB = false;
 
-    setFrequency(frequency);
-    updateDisplay();
+    /*
+     * Don't hammer on setting frequency / updating display if
+     * we are at the edges already and we're being clamped above.
+     */
+//    if (prev_freq != frequency) {
+      setFrequency(frequency);
+      updateDisplay();
+//    }
   }
 }
 
