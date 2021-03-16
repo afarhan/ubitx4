@@ -42,6 +42,7 @@
 // limits the tuning and working range of the ubitx between 3 MHz and 30 MHz
 #define LOWEST_FREQ   (100000l)
 #define HIGHEST_FREQ (30000000l)
+#define FAST_TUNE_STEP (200000L)
 
 #define DEFAULT_FIRSTIF 45000000L
 

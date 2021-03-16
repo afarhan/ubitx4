@@ -11,6 +11,7 @@
  *  - If the menu item is NOT clicked on, then the menu's prompt is to be displayed
  */
 
+#include "ubitx4_defaults.h"
 
 /** A generic control to read variable values
 */
@@ -59,9 +60,6 @@ void menuBand(int btn){
   int knob = 0;
   int band;
   unsigned long offset;
-
- // band = frequency/1000000l;
- // offset = frequency % 1000000l;
     
   if (!btn){
    printLineF2(F("Band Select    \x7E"));
@@ -80,19 +78,27 @@ void menuBand(int btn){
     knob = enc_read();
     if (knob != 0){
       /*
-      if (band > 3 && knob < 0)
-        band--;
-      if (band < 30 && knob > 0)
-        band++; 
-      if (band > 10)
-        isUSB = true;
-      else
-        isUSB = false;
-      setFrequency(((unsigned long)band * 1000000l) + offset); */
-      if (knob < 0 && frequency > 3000000l)
-        setFrequency(frequency - 200000l);
-      if (knob > 0 && frequency < 30000000l)
-        setFrequency(frequency + 200000l);
+       * Ensure that we cap the band select between LOWEST_FREQ
+       * and HIGHEST_FREQ.
+       */
+      if ((knob < 0) && (frequency > LOWEST_FREQ)) {
+        /* Ensure we don't tune below LOWEST_FREQ */
+        if (frequency > (FAST_TUNE_STEP * 2)) {
+          setFrequency(frequency - FAST_TUNE_STEP);
+        } else {
+          setFrequency(LOWEST_FREQ);
+        }
+      }
+      if ((knob > 0) && (frequency < HIGHEST_FREQ)) {
+        /* Ensure we don't tune above HIGHEST_FREQ */
+        if ((frequency + FAST_TUNE_STEP) > HIGHEST_FREQ) {
+          setFrequency(HIGHEST_FREQ);
+        } else {
+          setFrequency(frequency + FAST_TUNE_STEP);
+        }
+      }
+
+      /* Adjust mode to be USB/LSB across 10MHz */
       if (frequency > 10000000l)
         isUSB = true;
       else
