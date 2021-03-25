@@ -32,18 +32,15 @@
 #define SECOND_OSC_USB (56995000l)
 #define SECOND_OSC_LSB (32995000l)
 
-// the second oscillator should ideally be at 57 MHz, however, the crystal filter's center frequency
-// is shifted down a little due to the loading from the impedance matching L-networks on either sides
-#define SECOND_OSC_USB (56995000l)
-#define SECOND_OSC_LSB (32995000l)
-
 //these are the two default USB and LSB frequencies. The best frequencies depend upon your individual taste and filter shape
 #define INIT_USB_FREQ   (11996500l)
+
+// Default first IF frequency (can be tuned via EEPROM)
+#define DEFAULT_FIRSTIF 45000000L
+
 // limits the tuning and working range of the ubitx between 3 MHz and 30 MHz
 #define LOWEST_FREQ   (100000l)
 #define HIGHEST_FREQ (30000000l)
 #define FAST_TUNE_STEP (200000L)
-
-#define DEFAULT_FIRSTIF 45000000L
 
 #endif	/* __UBITX4_EEPROM_DEFAULTS_H__ */

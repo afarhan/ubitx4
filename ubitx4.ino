@@ -537,7 +537,7 @@ void setup()
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
-  printLine2("uBITX v4.3b");
+  printLineF2(F("uBITX v4.3b"));
   //active_delay(500);
 
   initSettings();

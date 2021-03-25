@@ -7,6 +7,10 @@
 
 /**
  * Select the properly tx harmonic filters
+ *
+ * This is valid for the ubitx v4 board; different boards have different TX filter
+ * configurations and thus will need a different filter mapping routine here!
+ * 
  * The four harmonic filters use only three relays
  * the four LPFs cover 30-21 Mhz, 18 - 14 Mhz, 7-10 MHz and 3.5 to 5 Mhz
  * Briefly, it works like this, 
