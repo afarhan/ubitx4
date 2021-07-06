@@ -1,4 +1,4 @@
-  /**
+/**
  * This source file is under General Public License version 3.
  * 
  * This verision uses a built-in Si5351 library
@@ -33,6 +33,14 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
+#include "ubitx4_eeprom_defs.h"
+#include "ubitx4_pin_config.h"
+#include "ubitx4_defaults.h"
+
+#include "ubitx4_txfilt.h"
+
+#include "ubitx_ui.h"
+
 /**
     The main chip which generates upto three oscillators of various frequencies in the
     Raduino is the Si5351a. To learn more about Si5351a you can download the datasheet
@@ -44,57 +52,9 @@
     code). Here are some defines and declarations used by Jerry's routines:
 */
 
-
-/**
- * We need to carefully pick assignment of pin for various purposes.
- * There are two sets of completely programmable pins on the Raduino.
- * First, on the top of the board, in line with the LCD connector is an 8-pin connector
- * that is largely meant for analog inputs and front-panel control. It has a regulated 5v output,
- * ground and six pins. Each of these six pins can be individually programmed 
- * either as an analog input, a digital input or a digital output. 
- * The pins are assigned as follows (left to right, display facing you): 
- *      Pin 1 (Violet), A7, SPARE
- *      Pin 2 (Blue),   A6, KEYER (DATA)
- *      Pin 3 (Green), +5v 
- *      Pin 4 (Yellow), Gnd
- *      Pin 5 (Orange), A3, PTT
- *      Pin 6 (Red),    A2, F BUTTON
- *      Pin 7 (Brown),  A1, ENC B
- *      Pin 8 (Black),  A0, ENC A
- *Note: A5, A4 are wired to the Si5351 as I2C interface 
- *       *     
- * Though, this can be assigned anyway, for this application of the Arduino, we will make the following
- * assignment
- * A2 will connect to the PTT line, which is the usually a part of the mic connector
- * A3 is connected to a push button that can momentarily ground this line. This will be used for RIT/Bandswitching, etc.
- * A6 is to implement a keyer, it is reserved and not yet implemented
- * A7 is connected to a center pin of good quality 100K or 10K linear potentiometer with the two other ends connected to
- * ground and +5v lines available on the connector. This implments the tuning mechanism
- */
-
-#define ENC_A (A0)
-#define ENC_B (A1)
-#define FBUTTON (A2)
-#define PTT   (A3)
-#define ANALOG_KEYER (A6)
-#define ANALOG_SPARE (A7)
-
-/** 
- * The Raduino board is the size of a standard 16x2 LCD panel. It has three connectors:
- * 
- * First, is an 8 pin connector that provides +5v, GND and six analog input pins that can also be 
- * configured to be used as digital input or output pins. These are referred to as A0,A1,A2,
- * A3,A6 and A7 pins. The A4 and A5 pins are missing from this connector as they are used to 
- * talk to the Si5351 over I2C protocol. 
- * 
- * Second is a 16 pin LCD connector. This connector is meant specifically for the standard 16x2
- * LCD display in 4 bit mode. The 4 bit mode requires 4 data lines and two control lines to work:
- * Lines used are : RESET, ENABLE, D4, D5, D6, D7 
- * We include the library and declare the configuration of the LCD panel too
- */
-
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(8,9,10,11,12,13);
+LiquidCrystal lcd(LCD_PIN_RESET, LCD_PIN_ENABLE,
+  LCD_PIN_D4, LCD_PIN_D5, LCD_PIN_D6, LCD_PIN_D7);
 
 /**
  * The Arduino, unlike C/C++ on a regular computer with gigabytes of RAM, has very little memory.
@@ -111,77 +71,6 @@ char c[30], b[30];
 char printBuff[2][31];  //mirrors what is showing on the two lines of the display
 int count = 0;          //to generally count ticks, loops, etc
 
-/** 
- *  The second set of 16 pins on the Raduino's bottom connector are have the three clock outputs and the digital lines to control the rig.
- *  This assignment is as follows :
- *    Pin   1   2    3    4    5    6    7    8    9    10   11   12   13   14   15   16
- *         GND +5V CLK0  GND  GND  CLK1 GND  GND  CLK2  GND  D2   D3   D4   D5   D6   D7  
- *  These too are flexible with what you may do with them, for the Raduino, we use them to :
- *  - TX_RX line : Switches between Transmit and Receive after sensing the PTT or the morse keyer
- *  - CW_KEY line : turns on the carrier for CW
- */
-
-#define TX_RX (7)
-#define CW_TONE (6)
-#define TX_LPF_A (5)
-#define TX_LPF_B (4)
-#define TX_LPF_C (3)
-#define CW_KEY (2)
-
-/**
- * These are the indices where these user changable settinngs are stored  in the EEPROM
- */
-#define MASTER_CAL 0
-#define LSB_CAL 4
-#define USB_CAL 8
-#define SIDE_TONE 12
-//these are ids of the vfos as well as their offset into the eeprom storage, don't change these 'magic' values
-#define VFO_A 16
-#define VFO_B 20
-#define CW_SIDETONE 24
-#define CW_SPEED 28
-
-//These are defines for the new features back-ported from KD8CEC's software
-//these start from beyond 256 as Ian, KD8CEC has kept the first 256 bytes free for the base version
-#define VFO_A_MODE  256 // 2: LSB, 3: USB
-#define VFO_B_MODE  257
-
-//values that are stroed for the VFO modes
-#define VFO_MODE_LSB 2
-#define VFO_MODE_USB 3
-
-// handkey, iambic a, iambic b : 0,1,2f
-#define CW_KEY_TYPE 358
-
-/**
- * The uBITX is an upconnversion transceiver. The first IF is at 45 MHz.
- * The first IF frequency is not exactly at 45 Mhz but about 5 khz lower,
- * this shift is due to the loading on the 45 Mhz crystal filter by the matching
- * L-network used on it's either sides.
- * The first oscillator works between 48 Mhz and 75 MHz. The signal is subtracted
- * from the first oscillator to arriive at 45 Mhz IF. Thus, it is inverted : LSB becomes USB
- * and USB becomes LSB.
- * The second IF of 12 Mhz has a ladder crystal filter. If a second oscillator is used at 
- * 57 Mhz, the signal is subtracted FROM the oscillator, inverting a second time, and arrives 
- * at the 12 Mhz ladder filter thus doouble inversion, keeps the sidebands as they originally were.
- * If the second oscillator is at 33 Mhz, the oscilaltor is subtracated from the signal, 
- * thus keeping the signal's sidebands inverted. The USB will become LSB.
- * We use this technique to switch sidebands. This is to avoid placing the lsbCarrier close to
- * 12 MHz where its fifth harmonic beats with the arduino's 16 Mhz oscillator's fourth harmonic
- */
-
-// the second oscillator should ideally be at 57 MHz, however, the crystal filter's center frequency 
-// is shifted down a little due to the loading from the impedance matching L-networks on either sides
-#define SECOND_OSC_USB (56995000l)
-#define SECOND_OSC_LSB (32995000l) 
- 
-
-//these are the two default USB and LSB frequencies. The best frequencies depend upon your individual taste and filter shape
-#define INIT_USB_FREQ   (11996500l)
-// limits the tuning and working range of the ubitx between 3 MHz and 30 MHz
-#define LOWEST_FREQ   (100000l)
-#define HIGHEST_FREQ (30000000l)
-
 //we directly generate the CW by programmin the Si5351 to the cw tx frequency, hence, both are different modes
 //these are the parameter passed to startTx
 #define TX_SSB 0
@@ -193,7 +82,7 @@ int8_t meter_reading = 0; // a -1 on meter makes it invisible
 unsigned long vfoA=7150000L, vfoB=14200000L, sideTone=800, usbCarrier;
 char isUsbVfoA=0, isUsbVfoB=1;
 unsigned long frequency, ritRxFrequency, ritTxFrequency;  //frequency is the current frequency on the dial
-unsigned long firstIF =   45000000L;
+unsigned long firstIF = DEFAULT_FIRSTIF;
 
 //these are variables that control the keyer behaviour
 int cwSpeed = 100; //this is actuall the dot period in milliseconds
@@ -239,46 +128,6 @@ void active_delay(int delay_by){
 }
 
 /**
- * Select the properly tx harmonic filters
- * The four harmonic filters use only three relays
- * the four LPFs cover 30-21 Mhz, 18 - 14 Mhz, 7-10 MHz and 3.5 to 5 Mhz
- * Briefly, it works like this, 
- * - When KT1 is OFF, the 'off' position routes the PA output through the 30 MHz LPF
- * - When KT1 is ON, it routes the PA output to KT2. Which is why you will see that
- *   the KT1 is on for the three other cases.
- * - When the KT1 is ON and KT2 is off, the off position of KT2 routes the PA output
- *   to 18 MHz LPF (That also works for 14 Mhz) 
- * - When KT1 is On, KT2 is On, it routes the PA output to KT3
- * - KT3, when switched on selects the 7-10 Mhz filter
- * - KT3 when switched off selects the 3.5-5 Mhz filter
- * See the circuit to understand this
- */
-
-void setTXFilters(unsigned long freq){
-  
-  if (freq > 21000000L){  // the default filter is with 35 MHz cut-off
-    digitalWrite(TX_LPF_A, 0);
-    digitalWrite(TX_LPF_B, 0);
-    digitalWrite(TX_LPF_C, 0);
-  }
-  else if (freq >= 14000000L){ //thrown the KT1 relay on, the 30 MHz LPF is bypassed and the 14-18 MHz LPF is allowd to go through
-    digitalWrite(TX_LPF_A, 1);
-    digitalWrite(TX_LPF_B, 0);
-    digitalWrite(TX_LPF_C, 0);
-  }
-  else if (freq > 7000000L){
-    digitalWrite(TX_LPF_A, 1);
-    digitalWrite(TX_LPF_B, 1);
-    digitalWrite(TX_LPF_C, 0);    
-  }
-  else {
-    digitalWrite(TX_LPF_A, 1);
-    digitalWrite(TX_LPF_B, 1);
-    digitalWrite(TX_LPF_C, 1);    
-  }
-}
-
-/**
  * This is the most frequently called function that configures the 
  * radio to a particular frequeny, sideband and sets up the transmit filters
  * 
@@ -317,8 +166,19 @@ void setFrequency(unsigned long f){
  
 void startTx(byte txMode){
   unsigned long tx_freq = 0;  
-    
+
+  // Turn off the main mixer oscillator and wait for RX->TX burst before
+  // TX is flipped on.  Then we will re-enable the clocks.
+  si5351bx_setfreq(2, 0);
+
+  // Wait so things settle.
+  delay(TX_DELAY_OSC_OFF);
+
+  // Flip to TX.
   digitalWrite(TX_RX, 1);
+
+  // Wait for relays, etc to settle.
+  delay(TX_DELAY_ENABLE);
   inTx = 1;
   
   if (ritOn){
@@ -357,12 +217,19 @@ void startTx(byte txMode){
       si5351bx_setfreq(2, frequency - sideTone); 
   }
   updateDisplay();
+  clearMeterDisplay();
 }
 
 void stopTx(){
   inTx = 0;
 
+  // Turn off the main vfo before disabling TX. setFrequency() will fix
+  // it.
+  si5351bx_setfreq(2, 0);           // disable the VFO oscillator.
+  delay(TX_DELAY_OSC_OFF);
+
   digitalWrite(TX_RX, 0);           //turn off the tx
+  delay(TX_DELAY_ENABLE);           // wait for relays to settle
   si5351bx_setfreq(0, usbCarrier);  //set back the cardrier oscillator anyway, cw tx switches it off
 
   if (ritOn)
@@ -459,23 +326,49 @@ void checkButton(){
 void doTuning(){
   int s;
   unsigned long prev_freq;
+  int freq_delta = 0;
 
   s = enc_read();
   if (s != 0){
     prev_freq = frequency;
 
+    /*
+     * Ensure that we don't tune below LOWEST_FREQ/HIGHEST_FREQ.
+     * We need to be sure that frequency doesn't underflow!
+     */
+
     if (s > 4)
-      frequency += 10000l;
+      freq_delta = 10000;
     else if (s > 2)
-      frequency += 500;
+      freq_delta = 500;
     else if (s > 0)
-      frequency +=  50l;
+      freq_delta = 50;
     else if (s > -2)
-      frequency -= 50l;
+      freq_delta = -50;
     else if (s > -4)
-      frequency -= 500l;
+      freq_delta = -500;
     else
-      frequency -= 10000l;
+      freq_delta = -10000;
+
+    /* Be super careful we don't underflow! */
+    if (freq_delta < 0) {
+      unsigned long offset;
+      offset = frequency - LOWEST_FREQ;
+      if (offset < (-freq_delta)) {
+        frequency = LOWEST_FREQ;
+        freq_delta = 0;
+      }
+    }
+    
+    /* Not so likely to overflow here; a straight comparison is fine */
+    if (freq_delta > 0) {
+      if (frequency + freq_delta > HIGHEST_FREQ) {
+        frequency = HIGHEST_FREQ;
+        freq_delta = 0;
+      }
+    }
+
+    frequency += freq_delta;
 
     if (prev_freq < 10000000l && frequency > 10000000l)
       isUSB = true;
@@ -483,8 +376,14 @@ void doTuning(){
     if (prev_freq > 10000000l && frequency < 10000000l)
       isUSB = false;
 
-    setFrequency(frequency);
-    updateDisplay();
+    /*
+     * Don't hammer on setting frequency / updating display if
+     * we are at the edges already and we're being clamped above.
+     */
+//    if (prev_freq != frequency) {
+      setFrequency(frequency);
+      updateDisplay();
+//    }
   }
 }
 
@@ -523,10 +422,10 @@ void initSettings(){
   EEPROM.get(VFO_B, vfoB);
   EEPROM.get(CW_SIDETONE, sideTone);
   EEPROM.get(CW_SPEED, cwSpeed);
-  
+  EEPROM.get(CAL_FIRST_IF_FREQ, firstIF);
   
   if (usbCarrier > 12000000l || usbCarrier < 11990000l)
-    usbCarrier = 11997000l;
+    usbCarrier = INIT_USB_FREQ;
   if (vfoA > 35000000l || 3500000l > vfoA)
      vfoA = 7150000l;
   if (vfoB > 35000000l || 3500000l > vfoB)
@@ -535,6 +434,8 @@ void initSettings(){
     sideTone = 800;
   if (cwSpeed < 10 || 1000 < cwSpeed) 
     cwSpeed = 100;
+  if (firstIF < 44500000 || firstIF > 45500000)
+    firstIF = DEFAULT_FIRSTIF;
 
   /*
    * The VFO modes are read in as either 2 (USB) or 3(LSB), 0, the default
@@ -629,18 +530,23 @@ void initPorts(){
 void setup()
 {
   Serial.begin(38400);
-  Serial.flush();  
+  Serial.flush();
   lcd.begin(16, 2);
+  lcd.clear();
+  initMeter();
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
-  printLine2("uBITX v4.3"); 
+  printLineF2(F("uBITX v4.3b"));
   //active_delay(500);
 
-//  initMeter(); //not used in this build
   initSettings();
   initPorts();     
   initOscillators();
+
+  si5351bx_set_drive(0, 1); // 4ma
+  si5351bx_set_drive(1, 1); // 4ma
+  si5351bx_set_drive(2, 1); // 4ma
 
   frequency = vfoA;
   setFrequency(vfoA);
@@ -656,21 +562,23 @@ void setup()
  */
 
 byte flasher = 0;
-void loop(){ 
-  
-  cwKeyer(); 
+void loop(){
+
+  cwKeyer();
   if (!txCAT)
     checkPTT();
   checkButton();
 
-  //tune only when not tranmsitting 
+  //tune / display s-meter only when not tranmsitting
   if (!inTx){
     if (ritOn)
       doRIT();
     else 
       doTuning();
+    // TODO: only update this every few milliseconds? Not constantly?
+    updateMeterDisplay();
   }
-  
+
   //we check CAT after the encoder as it might put the radio into TX
   checkCAT();
 }

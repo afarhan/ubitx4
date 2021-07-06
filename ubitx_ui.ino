@@ -6,8 +6,14 @@
  * quickly cleared up.
  */
 
+#include "ubitx4_eeprom_defs.h"
+#include "ubitx4_pin_config.h"
+
+#include "ubitx_ui.h"
+
 //returns true if the button is pressed
-int btnDown(){
+int btnDown(void)
+{
   if (digitalRead(FBUTTON) == HIGH)
     return 0;
   else
@@ -24,65 +30,59 @@ int btnDown(){
  */
 
 
-char meter[17];
+char meter[2];
 
-const byte PROGMEM s_meter_bitmap[] = {
-  B00000,B00000,B00000,B00000,B00000,B00100,B00100,B11011,
-  B10000,B10000,B10000,B10000,B10100,B10100,B10100,B11011,
-  B01000,B01000,B01000,B01000,B01100,B01100,B01100,B11011,
-  B00100,B00100,B00100,B00100,B00100,B00100,B00100,B11011,
-  B00010,B00010,B00010,B00010,B00110,B00110,B00110,B11011,
-  B00001,B00001,B00001,B00001,B00101,B00101,B00101,B11011,
-  B10000,B11000,B11100,B11110,B11100,B11000,B10000,B00000,
-  B00001,B00011,B00111,B01111,B00111,B00011,B00001,B00000
+const PROGMEM uint8_t s_meter_bitmap[64] = {
+  B00000, B00000, B00000, B00000, B00000, B00000, B00000, B11111, //shortest bar
+  B00000, B00000, B00000, B00000, B00000, B00000, B11111, B11111,
+  B00000, B00000, B00000, B00000, B00000, B11111, B11111, B11111,
+  B00000, B00000, B00000, B00000, B11111, B11111, B11111, B11111,
+  B00000, B00000, B00000, B11111, B11111, B11111, B11111, B11111,
+  B00000, B00000, B11111, B11111, B11111, B11111, B11111, B11111,
+  B00000, B11111, B11111, B11111, B11111, B11111, B11111, B11111,
+  B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111, // tallest bar
 };
 
+// Initialise the custom character out of program memory
+static void
+initLcdChar(char lcd_char, char s_meter_bitmap_offset)
+{
+  uint8_t tmp_bytes[8];
+  char i;
 
+  for (i = 0; i < 8; i++) {
+    tmp_bytes[i] = pgm_read_byte(&s_meter_bitmap[s_meter_bitmap_offset + i]);
+  }
+  lcd.createChar(lcd_char, tmp_bytes);
+}
 
 // initializes the custom characters
-// we start from char 1 as char 0 terminates the string!
-void initMeter(){
-  lcd.createChar(1, s_meter_bitmap);
-  lcd.createChar(2, s_meter_bitmap + 8);
-  lcd.createChar(3, s_meter_bitmap + 16);
-  lcd.createChar(4, s_meter_bitmap + 24);
-  lcd.createChar(5, s_meter_bitmap + 32);
-  lcd.createChar(6, s_meter_bitmap + 40);
-  lcd.createChar(0, s_meter_bitmap + 48);
-  lcd.createChar(7, s_meter_bitmap + 56);  
+void initMeter(void)
+{
+  lcd.setCursor(0, 0); // Ensure we've reset to display RAM
+  initLcdChar(0, 0); // First call - points to chargen RAM
+  initLcdChar(1, 8);
+  initLcdChar(2, 16);
+  initLcdChar(3, 24);
+  initLcdChar(4, 32);
+  initLcdChar(5, 40);
+  initLcdChar(6, 48);
+  initLcdChar(7, 56);
+  lcd.setCursor(0, 0); // Finish up - point to display RAM again
 }
 
 
 /**
- * The meter is drawn with special characters.
- * character 1 is used to simple draw the blocks of the scale of the meter
- * characters 2 to 6 are used to draw the needle in positions 1 to within the block
- * This displays a meter from 0 to 100, -1 displays nothing
+ * The meter is drawn with special characters from 0..255
  */
-
-void drawMeter(int8_t needle){
-  int16_t best, i, s;
-
-  if (needle < 0)
-    return;
-
-  s = (needle * 4)/10;
-  for (i = 0; i < 8; i++){
-    if (s >= 5)
-      meter[i] = 1;
-    else if (s >= 0)
-      meter[i] = 2 + s;
-    else
-      meter[i] = 1;
-    s = s - 5;
-  }
-  if (needle >= 40)
-    meter[i-1] = 6;
-  meter[i] = 0;
+void drawMeter(uint8_t needle)
+{
+  meter[0] = needle / 32;
+  meter[1] = needle / 32;
 }
 
 // The generic routine to display one line on the LCD 
-void printLine(char linenmbr, char *c) {
+void printLine(char linenmbr, const char *c) {
   if (strcmp(c, printBuff[linenmbr])) {     // only refresh the display when there was a change
     lcd.setCursor(0, linenmbr);             // place the cursor at the beginning of the selected line
     lcd.print(c);
@@ -94,18 +94,26 @@ void printLine(char linenmbr, char *c) {
   }
 }
 
+void
+printLineF(char linenmbr, const __FlashStringHelper *c)
+{
+  int i;
+  char tmp[17]; // XXX TODO: figure out how to do this inline without the buffer
+  PGM_P p = reinterpret_cast<PGM_P>(c);
+  unsigned char ch;
 
-//  short cut to print to the first line
-void printLine1(char *c){
-  printLine(1,c);
-}
-//  short cut to print to the first line
-void printLine2(char *c){
-  printLine(0,c);
+  for (i = 0; i < 17; i++) {
+    ch = pgm_read_byte(p++);
+    tmp[i] = ch;
+    if (ch == 0)
+      break;
+  }
+  printLine(linenmbr, tmp);
 }
 
 // this builds up the top line of the display with frequency and mode
-void updateDisplay() {
+void updateDisplay(void)
+{
   // tks Jack Purdum W8TEE
   // replaced fsprint commmands by str commands for code size reduction
 
@@ -134,19 +142,25 @@ void updateDisplay() {
     else
       strcat(c, "B:");
   }
-
-
-
-  //one mhz digit if less than 10 M, two digits if more
-  if (frequency < 10000000l){
+  
+  /*
+   * + zero mhz digit/one less dot if less than 1MHz
+   * + one mhz digit if less than 10MHz
+   * + two digits if more
+   */
+  if (frequency < 1000000L) {
+    c[6] = ' '; c[7] = ' '; c[8] = ' ';
+    strncat(c, &b[0], 3);    
+    strcat(c, ".");
+    strncat(c, &b[3], 3);
+  } else if (frequency < 10000000l){
     c[6] = ' ';
     c[7]  = b[0];
     strcat(c, ".");
     strncat(c, &b[1], 3);    
     strcat(c, ".");
     strncat(c, &b[4], 3);
-  }
-  else {
+  } else {
     strncat(c, b, 2);
     strcat(c, ".");
     strncat(c, &b[2], 3);
@@ -157,22 +171,41 @@ void updateDisplay() {
   if (inTx)
     strcat(c, " TX");
   printLine(1, c);
+}
 
 /*
-  //now, the second line
-  memset(c, 0, sizeof(c));
-  memset(b, 0, sizeof(b));
+ * Update the meter display!
+ */
+void
+updateMeterDisplay(void)
+{
+  int meter_reading = 0;
 
-  if (inTx)
-    strcat(c, "TX ");
-  else if (ritOn)
-    strcpy(c, "RIT");
+  // Second line, meter on A7 (ANALOG_SPARE)
+  meter_reading = analogRead(ANALOG_SPARE);
 
-  strcpy(c, "      \xff");
-  drawMeter(meter_reading);
-  strcat(c, meter);
-  strcat(c, "\xff");
-  printLine2(c);*/
+  // TODO - there's no mapping table here yet! Just linear it!
+  if (meter_reading > 255) {
+    // Ensure we definitely don't overflow an int here
+    meter_reading = 255;
+  }
+  drawMeter(meter_reading); // this takes uint8_t
+  lcd.setCursor(14, 0);
+  lcd.write(meter[0]);
+  lcd.setCursor(15, 0);
+  lcd.write(meter[1]);
+}
+
+/*
+ * Clear the meter - used during transmit
+ */
+void
+clearMeterDisplay(void)
+{
+  lcd.setCursor(14, 0);
+  lcd.write(' ');
+  lcd.setCursor(15, 0);
+  lcd.write(' ');
 }
 
 int enc_prev_state = 3;
@@ -234,5 +267,3 @@ int enc_read(void) {
   }
   return(result);
 }
-
-

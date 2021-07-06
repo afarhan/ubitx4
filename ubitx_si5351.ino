@@ -60,6 +60,12 @@ void i2cWriten(uint8_t reg, uint8_t *vals, uint8_t vcnt) {  // write array
   Wire.endTransmission();
 }
 
+// Call to set the drive strength, takes effect next frequency
+// set.
+void si5351bx_set_drive(uint8_t clknum, uint8_t drv)
+{
+  si5351bx_drive[clknum] = drv & 0x3;
+}
 
 void si5351bx_init() {                  // Call once at power-up, start PLLA
   uint8_t reg;  uint32_t msxp1;
